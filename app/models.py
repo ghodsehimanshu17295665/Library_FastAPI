@@ -1,7 +1,8 @@
 import enum
 import uuid
 from datetime import datetime
-from typing import List
+from decimal import Decimal
+from typing import List, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -27,8 +28,12 @@ class Author(Base):
     )
     name: Mapped[str] = mapped_column(String(35), nullable=False)
     email: Mapped[str] = mapped_column(String(35), unique=True, nullable=False)
-    nationality: Mapped[str] = mapped_column(String(50), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    nationality: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )  # Optional
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
 
     books: Mapped[List["Book"]] = relationship(back_populates="author")
 
@@ -42,7 +47,7 @@ class Category(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    name: Mapped[str] = mapped_column(String(35), nullable=False)
+    name: Mapped[str] = mapped_column(String(35), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
     books: Mapped[List["Book"]] = relationship(back_populates="category")
@@ -58,18 +63,21 @@ class Book(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     title: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
-    publication_date: Mapped[datetime] = mapped_column(DateTime)
-    quantity: Mapped[int] = mapped_column(Integer)
+    publication_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     author_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("authors.id")
+        UUID(as_uuid=True), ForeignKey("authors.id"), nullable=False
     )
     category_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("categories.id")
+        UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False
     )
 
     author: Mapped["Author"] = relationship(back_populates="books")
     category: Mapped["Category"] = relationship(back_populates="books")
+    issued_books: Mapped[List["IssuedBook"]] = relationship(back_populates="book")
 
     def __repr__(self):
         return f"<Book(id={self.id}, title='{self.title}', quantity={self.quantity})>"
@@ -91,35 +99,56 @@ class Course(Base):
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     year: Mapped[YearEnum] = mapped_column(Enum(YearEnum), nullable=False)
+    students: Mapped[List["User"]] = relationship(back_populates="course")
 
     def __repr__(self):
         return f"<Course(id={self.id}, name='{self.name}', year='{self.year.name}')>"
 
 
-class Student(Base):
-    __tablename__ = "students"
+class GenderEnum(str, enum.Enum):
+    MALE = "Male"
+    FEMALE = "Female"
+    OTHER = "Other"
+
+
+class UserRoleEnum(str, enum.Enum):
+    ADMIN = "admin"
+    STUDENT = "student"
+
+
+class User(Base):
+    __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    enroll_number: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    mobile_number: Mapped[str] = mapped_column(String(15), nullable=False)
-    gender: Mapped[str] = mapped_column(
-        Enum("Male", "Female", "Other", name="gender_enum"), nullable=True
+    password: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRoleEnum] = mapped_column(
+        Enum(UserRoleEnum), default=UserRoleEnum.STUDENT, nullable=False
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    course_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("courses.id")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
     )
-    course: Mapped["Course"] = relationship()
 
+    # Student-specific fields
+    enroll_number: Mapped[Optional[str]] = mapped_column(
+        String(30), unique=True, nullable=True
+    )
+    mobile_number: Mapped[Optional[str]] = mapped_column(String(15), nullable=True)
+    gender: Mapped[Optional[GenderEnum]] = mapped_column(
+        Enum(GenderEnum), nullable=True
+    )
+    course_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("courses.id"), nullable=True
+    )
+
+    course: Mapped[Optional["Course"]] = relationship(back_populates="students")
     issued_books: Mapped[List["IssuedBook"]] = relationship(back_populates="student")
 
     def __repr__(self):
-        return f"<Student(id={self.id}, name='{self.name}', enroll_number='{self.enroll_number}')>"
+        return f"<User(id={self.id}, email='{self.email}', role='{self.role}')>"
 
 
 class IssuedBook(Base):
@@ -128,22 +157,26 @@ class IssuedBook(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    issue_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    due_date: Mapped[datetime] = mapped_column(DateTime)
-    return_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    is_returned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    issue_date: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    due_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    return_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    is_returned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     student_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("students.id")
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
     book_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("books.id")
+        UUID(as_uuid=True), ForeignKey("books.id"), nullable=False
     )
 
-    student: Mapped["Student"] = relationship(back_populates="issued_books")
-    book: Mapped["Book"] = relationship()
+    student: Mapped["User"] = relationship(back_populates="issued_books")
+    book: Mapped["Book"] = relationship(back_populates="issued_books")
 
-    fine: Mapped["Fine"] = relationship(back_populates="issued_book", uselist=False)
+    fine: Mapped[Optional["Fine"]] = relationship(
+        back_populates="issued_book", uselist=False
+    )
 
     def __repr__(self):
         return f"<IssuedBook(id={self.id}, book_id={self.book_id}, student_id={self.student_id}, returned={self.is_returned})>"
@@ -155,11 +188,15 @@ class Fine(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    amount: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False
+    )  # Decimal for money
+    date: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
 
     issued_book_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("issued_books.id"), unique=True, nullable=True
+        UUID(as_uuid=True), ForeignKey("issued_books.id"), unique=True, nullable=False
     )
     issued_book: Mapped["IssuedBook"] = relationship(back_populates="fine")
 
