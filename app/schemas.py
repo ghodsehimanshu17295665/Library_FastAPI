@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models import GenderEnum, UserRoleEnum
+from app.models import GenderEnum, UserRoleEnum, YearEnum
 
 
 # Base schema (shared fields)
@@ -83,3 +83,48 @@ class UserUpdate(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class BookBase(BaseModel):
+    title: str
+    publication_date: Optional[datetime] = None
+    quantity: int = 0
+    author_name: str
+    category_name: str
+
+
+class BookCreate(BookBase):
+    pass
+
+
+class BookUpdate(BaseModel):
+    title: Optional[str]
+    publication_date: Optional[datetime]
+    quantity: Optional[int]
+    author_name: Optional[str]
+    category_name: Optional[str]
+
+
+class BookResponse(BookBase):
+    id: UUID
+
+
+    class Config:
+        orm_mode = True
+
+
+class CourseBase(BaseModel):
+    name: str
+    description: str
+    year: YearEnum
+
+
+class CourseCreate(CourseBase):
+    pass
+
+
+class CourseResponse(CourseBase):
+    id: UUID
+
+    class Config:
+        orm_mode = True 
