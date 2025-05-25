@@ -103,3 +103,73 @@ def get_book(
         author_name=book.author.name,
         category_name=book.category.name,
     )
+
+
+@router.put("/{book_name}", response_model=schemas.BookUpdate)
+def update_book(
+    book_name: str,
+    update_book: schemas.BookUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can update Books")
+
+    book = db.query(models.Book).filter(models.Book.title == book_name).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    if update_book.title:
+        book.title = update_book.title
+    if update_book.publication_date:
+        book.publication_date = update_book.publication_date
+    if update_book.quantity:
+        book.quantity = update_book.quantity
+    if update_book.author_name:
+        author = (
+            db.query(models.Author)
+            .filter(models.Author.name == update_book.author_name)
+            .first()
+        )
+        if not author:
+            raise HTTPException(status_code=404, detail="Author Not Found")
+        book.author_id = author.id
+    if update_book.category_name:
+        category = (
+            db.query(models.Category)
+            .filter(models.Category.name == update_book.category_name)
+            .first()
+        )
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+        book.category_id = category.id
+
+    db.commit()
+    db.refresh(book)
+
+    return schemas.BookResponse(
+        id=book.id,
+        title=book.title,
+        publication_date=book.publication_date,
+        quantity=book.quantity,
+        author_name=book.author.name,
+        category_name=book.category.name,
+    )
+
+
+@router.delete("/{book_name}")
+def delete_book(
+    book_name=str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can Delete Books")
+
+    book = db.query(models.Book).filter(models.Book.title == book_name).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    db.delete(book)
+    db.commit()
+    return {"message": "Book Deleted Successfully!"}
