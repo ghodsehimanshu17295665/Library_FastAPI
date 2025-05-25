@@ -108,9 +108,7 @@ class BookUpdate(BaseModel):
 class BookResponse(BookBase):
     id: UUID
 
-
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class CourseBase(BaseModel):
@@ -123,8 +121,13 @@ class CourseCreate(CourseBase):
     pass
 
 
+class CourseUpdate(BaseModel):
+    name: str
+    description: str
+    year: YearEnum
+
+
 class CourseResponse(CourseBase):
     id: UUID
 
-    class Config:
-        orm_mode = True 
+    model_config = {"from_attributes": True}
