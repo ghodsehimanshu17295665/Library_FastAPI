@@ -1,8 +1,9 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 
 from app.models import GenderEnum, UserRoleEnum, YearEnum
 
@@ -131,3 +132,59 @@ class CourseResponse(CourseBase):
     id: UUID
 
     model_config = {"from_attributes": True}
+
+
+class IssuedBookBase(BaseModel):
+    student_name: str
+    book_title: str
+    issue_date: Optional[datetime]
+    due_date: Optional[datetime]
+    return_date: Optional[datetime]
+    is_returned: bool
+
+
+class IssuedBookCreate(BaseModel):
+    student_name: str
+    book_title: str
+
+    @validator("student_name", "book_title")
+    def not_empty(cls, v):
+        if not v.strip():
+            raise ValueError("Field cannot be empty")
+        return v.strip()
+
+
+class IssuedBookResponse(BaseModel):
+    id: UUID
+    student_name: str
+    book_title: str
+    issue_date: datetime
+    due_date: datetime
+    return_date: Optional[datetime]
+    is_returned: bool
+
+    class Config:
+        orm_mode = True
+
+
+class ReturnBookRequest(BaseModel):
+    book_title: str
+
+    @validator("book_title")
+    def not_empty(cls, v):
+        if not v.strip():
+            raise ValueError("Book title cannot be empty")
+        return v.strip()
+
+
+class ReturnIssuedBookResponse(BaseModel):
+    issued_book_id: UUID
+    student_name: str
+    book_title: str
+    return_date: datetime
+    is_returned: bool
+    message: Optional[str] = None
+    fine_amount: Optional[Decimal] = None
+
+    class Config:
+        from_attributes = True
