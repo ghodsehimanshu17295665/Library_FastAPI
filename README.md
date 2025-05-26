@@ -98,3 +98,15 @@ Login: POST /users/login
 
 Authenticated actions require Bearer Token in Authorization header.
 ```
+
+## 🧾 Git Branch Guide
+```bash
+
+| Branch Name             | Purpose                                      |
+|--------------------------|----------------------------------------------|
+| `main`                  | Stable production-ready version              |
+| `task01-model-creation` | Added models for Author, Book, Category, etc.|
+| `task02-author-crud-api`| CRUD API implementation for Authors          |
+| `task03-crud-api`       | CRUD APIs for Book, Category, Course         |
+| `task04-IssuedBooks-crudAPI` | Issued books CRUD & fine logic added |
+```
