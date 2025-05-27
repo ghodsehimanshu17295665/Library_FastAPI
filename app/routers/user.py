@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app import database, models, schemas
 from app.auth import Hash, create_access_token, get_current_user
+from app.utils.email_service import send_email
+
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -26,6 +28,12 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(database.get_d
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    # Send email after registration
+    send_email(
+        to_email=user.email,
+        subject="Library Registration Successful",
+        body=f"Hello {user.name},\n\nWelcome to the Library System! Your registration was successful."
+    )
     return new_user
 
 
@@ -42,6 +50,11 @@ def login(request: schemas.UserLogin, db: Session = Depends(database.get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_access_token({"sub": db_user.email})
+    send_email(
+        to_email=db_user.email,
+        subject="Library Login Notification",
+        body=f"Hello {db_user.name},\n\nYou have successfully logged in to the Library System."
+    )
     return {"access_token": token, "token_type": "bearer"}
 
 
