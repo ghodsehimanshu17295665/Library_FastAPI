@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.auth import get_current_user
 from app.database import get_db
+from app.utils.pagination import Pagination
+
 
 router = APIRouter(prefix="/books", tags=["Books"])
 
@@ -68,20 +70,28 @@ def create_book(
 
 
 @router.get("/", response_model=List[schemas.BookResponse])
-def get_all_books(db: Session = Depends(get_db)):
-    books = db.query(models.Book).all()
-    result = []
-    for book in books:
-        result.append(
-            schemas.BookResponse(
-                id=book.id,
-                title=book.title,
-                publication_date=book.publication_date,
-                quantity=book.quantity,
-                author_name=book.author.name,
-                category_name=book.category.name,
-            )
+def get_all_books(
+    db: Session = Depends(get_db),
+    pagination: Pagination = Depends()
+):
+    books = (
+        db.query(models.Book)
+        .offset(pagination.offset)
+        .limit(pagination.limit)
+        .all()
+    )
+
+    result = [
+        schemas.BookResponse(
+            id=book.id,
+            title=book.title,
+            publication_date=book.publication_date,
+            quantity=book.quantity,
+            author_name=book.author.name,
+            category_name=book.category.name,
         )
+        for book in books
+    ]
     return result
 
 

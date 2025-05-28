@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.auth import get_current_user
 from app.database import get_db
+from app.utils.pagination import Pagination
+
 
 router = APIRouter(prefix="/course", tags=["Courses"])
 
@@ -43,18 +45,17 @@ def create_course(
 
 
 @router.get("/", response_model=List[schemas.CourseResponse])
-def get_all_course(db: Session = Depends(get_db)):
-    courses = db.query(models.Course).all()
-    result = []
-    for course in courses:
-        result.append(
-            schemas.CourseResponse(
-                id=course.id,
-                name=course.name,
-                description=course.description,
-                year=course.year,
-            )
+def get_all_course(db: Session = Depends(get_db), pagination: Pagination = Depends()):
+    courses = db.query(models.Course).offset(pagination.offset).limit(pagination.limit).all()
+    result = [
+        schemas.CourseResponse(
+            id=course.id,
+            name=course.name,
+            description=course.description,
+            year=course.year,
         )
+        for course in courses
+    ]
     return result
 
 

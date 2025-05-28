@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.auth import get_current_user
 from app.database import get_db
+from app.utils.pagination import Pagination
+
 
 router = APIRouter(prefix="/category", tags=["Categories"])
 
@@ -40,9 +42,10 @@ def create_category(
 # Get All Categories - Student & Admin
 @router.get("/", response_model=List[schemas.CategoryResponse])
 def get_categories(
+    pagination: Pagination = Depends(),
     db: Session = Depends(get_db),
 ):
-    return db.query(models.Category).all()
+    return db.query(models.Category).offset(pagination.offset).limit(pagination.limit).all()
 
 
 # Get One Category by Name - Admin Only

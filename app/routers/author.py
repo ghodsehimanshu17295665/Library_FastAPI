@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.auth import get_current_user
 from app.database import get_db
+from app.utils.pagination import Pagination
 
 router = APIRouter(prefix="/authors", tags=["Authors"])
 
@@ -40,9 +41,10 @@ def create_author(
 # Get All Authors - Student & Admin
 @router.get("/", response_model=List[schemas.AuthorResponse])
 def get_authors(
-    db: Session = Depends(get_db),
+    pagination: Pagination = Depends(),
+    db: Session = Depends(get_db)
 ):
-    return db.query(models.Author).all()
+    return db.query(models.Author).offset(pagination.offset).limit(pagination.limit).all()
 
 
 # Get One Author by Email - Admin Only

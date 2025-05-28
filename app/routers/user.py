@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app import database, models, schemas
 from app.auth import Hash, create_access_token, get_current_user
 from app.utils.email_service import send_email
+from app.utils.pagination import Pagination
+
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -38,9 +40,8 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(database.get_d
 
 
 @router.get("/all", response_model=List[schemas.UserResponse])
-def get_all_users(db: Session = Depends(database.get_db)):
-    users = db.query(models.User).all()
-    return users
+def get_all_users(pagination: Pagination = Depends(), db: Session = Depends(database.get_db)):
+    return db.query(models.User).offset(pagination.offset).limit(pagination.limit).all()
 
 
 @router.post("/login")
